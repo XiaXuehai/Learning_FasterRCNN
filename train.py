@@ -6,6 +6,8 @@ from torchvision import transforms, models
 from data.data_load import VOCData
 from fr_net import fastnet
 
+import numpy as np
+import visdom
 from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore")
@@ -14,7 +16,7 @@ def train():
     use_gpu = torch.cuda.is_available()
 
     learning_rate = 0.001
-    num_epochs = 1
+    num_epochs = 6
     batch_size = 1
 
     train_dataset = VOCData('data/train.txt',
@@ -26,27 +28,36 @@ def train():
     net = fastnet()
     if use_gpu:
         net = net.cuda()
-    opimizer = torch.optim.SGD(net.parameters(), lr=learning_rate, weight_decay=1e-4)
+    optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4], gamma=0.1)
+
+    iter_vis = 0
+    vis = visdom.Visdom()
+    win = vis.line(Y=np.array([0]), X=np.array([0]))
+
     for epoch in range(num_epochs):
+        scheduler.step()
         losses = 0
-        for i, (image, label, boxes) in tqdm(enumerate(train_loader)):
+        for i, (image, label, boxes, scale) in tqdm(enumerate(train_loader)):
             if use_gpu:
                 image = image.cuda()
                 boxes = boxes.cuda()
                 label = label.cuda()
 
-            loss = net(image, boxes, label)
+            loss = net(image, boxes, label, scale)
             losses += loss.item()
 
-            opimizer.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
-            opimizer.step()
+            optimizer.step()
 
             if (i+1)%100==0:
+                vis.line(Y=np.array([losses/100]), X=np.array([iter_vis]), win=win, update='append')
+                iter_vis += 1
                 print('Epoch:{}, Image:{}, Loss:{:.3f}'.format(epoch, i+1, losses/100))
                 losses = 0
 
-        torch.save(net.state_dict(), 'weight/fastrcnn_1.weight')
+        torch.save(net.state_dict(), 'weight/fastrcnn_{}.weight'.format(epoch))
 
 if __name__ == '__main__':
     train()

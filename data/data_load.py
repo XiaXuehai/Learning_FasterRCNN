@@ -46,14 +46,14 @@ class VOCData(Dataset):
         boxes = self.boxes[idx]
         img = cv2.imread(self.img_path[idx])
         img, boxes = self.random_flip(img, boxes)
-        img, boxes = self.resize(img, boxes)
+        img, boxes, scale = self.resize(img, boxes)
 
         # self.showimg(img, boxes)
 
         for t in self.transform:
             img = t(img)
 
-        return img, self.labels[idx], boxes
+        return img, self.labels[idx], boxes, scale
 
     def resize(self, image, boxes, min_size=600, max_size=1000):
         h, w, c = image.shape
@@ -70,7 +70,7 @@ class VOCData(Dataset):
         x2 = (boxes[:, 0] + 0.5 * boxes[:, 2]) * new_w
         y2 = (boxes[:, 1] + 0.5 * boxes[:, 3]) * new_h
         boxes = np.vstack((x1, y1, x2, y2)).transpose()
-        return image, boxes
+        return image, boxes, scale
 
     def random_flip(self, image, boxes):
         if np.random.rand(1) < 0.5:
@@ -108,7 +108,7 @@ class VOCData(Dataset):
         cv2.waitKey()
 
 
-VOC_BBOX_LABEL_NAMES = (
+VOC_label_name = (
     'aeroplane',
     'bicycle',
     'bird',
@@ -135,5 +135,5 @@ if __name__ == '__main__':
          transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])]
     a = VOCData('train.txt', transform=transform)
 
-    image, _, _ = a[1]
+    image, _, _,_ = a[1]
     print(image.shape)

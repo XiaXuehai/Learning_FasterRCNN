@@ -21,7 +21,7 @@ class RPN(nn.Module):
         # TODO: init parameters
 
 
-    def forward(self, x, img_size):
+    def forward(self, x, img_size, scale):
         n, c, h, w = x.shape
         anchors = utils.get_anchor(self.anchor_base, self.stride, h, w)
 
@@ -40,10 +40,16 @@ class RPN(nn.Module):
         rois = rois[0]
         scores = scores[0]
 
-        # TODO: min_size
+        # erase min_size
+        min_size = 16 * scale
+        ws = rois[:, 2] - rois[:, 0]
+        hs = rois[:, 3] - rois[:, 1]
+        keep = np.where((ws >= min_size) & (hs >= min_size))[0]
+        rois = rois[keep, :]
+        scores = scores[keep]
 
         pre_nms = 12000
-        post_nms = 1000
+        post_nms = 2000
         nms_thresh = 0.7
 
         order = scores.argsort()[::-1]

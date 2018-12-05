@@ -15,8 +15,7 @@ class RoiHead(nn.Module):
         self.score = nn.Linear(4096, self.n_class)
 
     def forward(self, x, rois):
-        # TODO:https://github.com/SirLPS/roi_pooling/blob/master/speed.py
-        #      the first dim of rois is what?
+        # conference: https://github.com/SirLPS/roi_pooling/blob/master/speed.py
         # ROI pooling by pytorch
         num_rois, _ = rois.shape
         # rescale to the size of the feature map

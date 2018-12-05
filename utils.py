@@ -116,13 +116,39 @@ def bbox2loc(src, dst):
     src_h = np.maximum(src_h, eps)
     src_w = np.maximum(src_w, eps)
 
-    dx = (dst_x - src_x) / src_w
-    dy = (dst_y - src_y) / src_h
-    dw = np.exp(dst_w / src_w)
-    dh = np.exp(dst_h / src_h)
+    tx = (dst_x - src_x) / src_w
+    ty = (dst_y - src_y) / src_h
+    tw = np.exp(dst_w / src_w)
+    th = np.exp(dst_h / src_h)
 
-    loc = np.vstack((dx, dy, dw, dh)).transpose()
+    loc = np.vstack((tx, ty, tw, th)).transpose()
     return loc
+
+def loc2bbox(src, loc):
+    if src.shape[0] == 0:
+        return np.zeros((0, 4), dtype=loc.dtype)
+
+    src_w = src[:, 2] - src[:, 0]
+    src_h = src[:, 3] - src[:, 1]
+    src_x = src[:, 0] + 0.5 * src_w
+    src_y = src[:, 1] + 0.5 * src_h
+
+    tx = loc[:, 0]
+    ty = loc[:, 1]
+    tw = loc[:, 2]
+    th = loc[:, 3]
+
+    dx = tx * src_w + src_x
+    dy = ty * src_h + src_y
+    dw = np.exp(tw) * src_w
+    dh = np.exp(th) * src_h
+
+    dst = np.zeros(loc.shape, dtype=loc.dtype)
+    dst[:, 0] = dx - 0.5 * dw
+    dst[:, 1] = dy - 0.5 * dh
+    dst[:, 2] = dx + 0.5 * dw
+    dst[:, 3] = dy + 0.5 * dh
+    return dst
 
 
 class anchor_target(object):
@@ -209,7 +235,7 @@ class proposal_target(object):
         boxes = boxes.cpu().numpy()
         labels = labels.cpu().numpy()
 
-        rois = np.concatenate((rois, boxes), axis=0) # ???
+        rois = np.concatenate((rois, boxes), axis=0) # todo: understand it
         n_pos_roi = int(self.n_sample * self.pos_ratio)
         ious = iou(rois, boxes)
         max_iou = ious.max(axis=1)
