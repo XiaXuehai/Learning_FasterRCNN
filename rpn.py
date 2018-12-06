@@ -29,16 +29,23 @@ class RPN(nn.Module):
         rpn_locs   = self.locs(x)
         rpn_scores = self.scores(x)
 
+        # rpn_locs is the (tx, ty, tw, th) which means (x_centre, y_centre, w,h)
         rpn_locs   = rpn_locs.permute(0, 2, 3, 1).contiguous().view(n, -1, 4)
         rpn_scores = rpn_scores.permute(0, 2, 3, 1).contiguous().view(n, -1, 2)
         # got foreground scores
         scores = rpn_scores[:, :, 1].detach().cpu().numpy()
 
-        #  transform (tx, ty, tw, th) to (x, y, w, h)
-        rois = utils.transform_locs(anchors, rpn_locs.detach().cpu().numpy(), img_size)
         # compromise to 1 batch_size!!!
-        rois = rois[0]
+        rois = rpn_locs[0]
         scores = scores[0]
+        # transform (tx, ty, tw, th) to (x, y, w, h) to (x1, y1, x2, y2)
+        # and clip by img_size
+        rois = utils.transform_locs(anchors, rois.detach().cpu().numpy())
+        h, w = img_size
+        rois[:, 0] = np.clip(rois[:, 0], 0, w)
+        rois[:, 1] = np.clip(rois[:, 1], 0, h)
+        rois[:, 2] = np.clip(rois[:, 2], 0, w)
+        rois[:, 3] = np.clip(rois[:, 3], 0, h)
 
         # erase min_size
         min_size = 16 * scale
@@ -54,9 +61,10 @@ class RPN(nn.Module):
 
         order = scores.argsort()[::-1]
         order = order[:pre_nms]
-        # TODO: how to optimize?
+
         roi_tmp = rois[order,:]
-        keep = utils.nms(roi_tmp, nms_thresh, post_nms)
+        keep = utils.nms(roi_tmp, nms_thresh)
+        keep = keep[:post_nms]
         roi = roi_tmp[keep]
 
         return rpn_locs, rpn_scores, roi, anchors
@@ -64,5 +72,5 @@ class RPN(nn.Module):
 
 if __name__ == '__main__':
     a = RPN()
-    x = torch.rand(8, 512, 40, 60)
-    a(x, (600, 1000))
+    x = torch.rand(1, 512, 40, 60)
+    a(x, (600, 1000), 1.0)

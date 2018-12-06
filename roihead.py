@@ -4,7 +4,7 @@ from torch import nn
 from torch.nn import functional as F
 
 class RoiHead(nn.Module):
-    def __init__(self, classifier, n_class=21, roi_size=7, spatial_scale=16., ):
+    def __init__(self, classifier, n_class=21, roi_size=7, spatial_scale=16.):
         super(RoiHead, self).__init__()
         self.n_class = n_class
         self.roi_size = (roi_size, roi_size)
@@ -36,7 +36,6 @@ class RoiHead(nn.Module):
         roi_scores = self.score(fc)
 
         return roi_locs, roi_scores
-
 
 
 from vgg16 import vgg

@@ -31,6 +31,7 @@ def train():
     optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4], gamma=0.1)
 
+    # init visdom
     iter_vis = 0
     vis = visdom.Visdom()
     win = vis.line(Y=np.array([0]), X=np.array([0]))
@@ -41,8 +42,6 @@ def train():
         for i, (image, label, boxes, scale) in tqdm(enumerate(train_loader)):
             if use_gpu:
                 image = image.cuda()
-                boxes = boxes.cuda()
-                label = label.cuda()
 
             loss = net(image, boxes, label, scale)
             losses += loss.item()

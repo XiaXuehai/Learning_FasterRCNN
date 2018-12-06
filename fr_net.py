@@ -29,11 +29,14 @@ class fastnet(nn.Module):
         # locs of rpn, roi is (tx,ty,tw,th) from the paper
         img_size = x.shape[2:]
         scale = scale.item()
+        # batch size is 1.
+        labels = labels[0]
+        boxes = boxes[0]
 
         fm = self.extractor(x)
         rpn_locs, rpn_scores, rois, anchors = self.rpn(fm, img_size, scale)
         # should be done at data transform?
-        gt_rpn_loc, gt_rpn_label = self.anchor_target(boxes[0], anchors, img_size)
+        gt_rpn_loc, gt_rpn_label = self.anchor_target(boxes, anchors, img_size)
 
         # rpn loss
         gt_rpn_loc   = torch.from_numpy(gt_rpn_loc).cuda()
@@ -41,7 +44,7 @@ class fastnet(nn.Module):
         rpn_loc_loss = self.loc_loss(rpn_locs[0], gt_rpn_loc, gt_rpn_label, self.rpn_sigma)
         rpn_cls_loss = F.cross_entropy(rpn_scores[0], gt_rpn_label, ignore_index=-1)
 
-        sample_roi, gt_roi_loc, gt_roi_score = self.proposal_target(rois, boxes[0], labels[0])
+        sample_roi, gt_roi_loc, gt_roi_score = self.proposal_target(rois, boxes, labels)
         roi_locs, roi_scores = self.head(fm, torch.from_numpy(sample_roi))
 
         # roi loss
@@ -82,7 +85,7 @@ class fastnet(nn.Module):
         roi_locs, roi_scores, rois = self.predict_net(img, img_size, scale)
 
         n_class = 21
-        score_thresh = 0.2
+        score_thresh = 0.1
         nms_thresh = 0.3
         mean = torch.Tensor([0., 0., 0., 0.]).repeat(n_class).unsqueeze(0)
         std = torch.Tensor([0.1, 0.1, 0.2, 0.2]).repeat(n_class).unsqueeze(0)
@@ -114,7 +117,7 @@ class fastnet(nn.Module):
             keep = utils.nms(roi_box_i, nms_thresh)
 
             bbox.append(roi_box_i[keep])
-            label.append( (i-1)*torch.ones((len(keep),)))
+            label.append((i-1)*torch.ones((len(keep),)))
             score.append(prob_i[keep])
         bbox = np.concatenate(bbox, axis=0).astype(np.float32)
         label = np.concatenate(label, axis=0).astype(np.int32)

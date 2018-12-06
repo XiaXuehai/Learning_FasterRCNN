@@ -35,16 +35,16 @@ def get_anchor(anchor_base, stride, h, w):
     anchors = anchors.astype(np.float32)
     return anchors
 
-def transform_locs(anchors, rpn_locs, img_size):
+def transform_locs(anchors, rpn_locs):
     w_a = anchors[:, 2] - anchors[:, 0]
     h_a = anchors[:, 3] - anchors[:, 1]
     x_a = anchors[:, 0] + 0.5 * w_a
     y_a = anchors[:, 1] + 0.5 * h_a
 
-    tx = rpn_locs[:, :, 0]
-    ty = rpn_locs[:, :, 1]
-    tw = rpn_locs[:, :, 2]
-    th = rpn_locs[:, :, 3]
+    tx = rpn_locs[:, 0]
+    ty = rpn_locs[:, 1]
+    tw = rpn_locs[:, 2]
+    th = rpn_locs[:, 3]
 
     dx = tx * w_a + x_a
     dy = ty * h_a + y_a
@@ -52,14 +52,14 @@ def transform_locs(anchors, rpn_locs, img_size):
     dh = np.exp(th) * h_a
 
     dst = np.zeros(rpn_locs.shape, dtype=rpn_locs.dtype)
-    dst[:, :, 0] = np.clip(dx - 0.5 * dw, 0, img_size[1])
-    dst[:, :, 1] = np.clip(dy - 0.5 * dh, 0, img_size[0])
-    dst[:, :, 2] = np.clip(dx + 0.5 * dw, 0, img_size[1])
-    dst[:, :, 3] = np.clip(dy + 0.5 * dh, 0, img_size[0])
+    dst[:, 0] = dx - 0.5 * dw
+    dst[:, 1] = dy - 0.5 * dh
+    dst[:, 2] = dx + 0.5 * dw
+    dst[:, 3] = dy + 0.5 * dh
 
     return dst
 
-def nms(rois, nms_thresh, top_n=None):
+def nms(rois, nms_thresh):
     x1 = rois[:, 0]
     y1 = rois[:, 1]
     x2 = rois[:, 2]
@@ -85,9 +85,6 @@ def nms(rois, nms_thresh, top_n=None):
         idx = np.where(iou <= nms_thresh)[0]
         order = order[idx+1]
 
-    if top_n and (len(keep)>=top_n):
-        keep = keep[:top_n]
-
     return keep
 
 def iou(abox, bbox):
@@ -99,6 +96,7 @@ def iou(abox, bbox):
     a_area = np.prod(abox[:, 2:] - abox[:, :2], axis=1)
     b_area = np.prod(bbox[:, 2:] - bbox[:, :2], axis=1)
 
+    # broadcast
     return inter / (a_area[:, None] + b_area - inter)
 
 def bbox2loc(src, dst):
@@ -161,7 +159,7 @@ class anchor_target(object):
         self.pos_ratio = pos_ratio
 
     def __call__(self, boxes, anchors, img_size):
-        boxes = boxes.cpu().numpy()
+        boxes = boxes.numpy()
         n_anchor = len(anchors)
 
         h, w = img_size
@@ -232,8 +230,8 @@ class proposal_target(object):
     def __call__(self, rois, boxes, labels,
                  loc_mean=(0., 0., 0., 0.), loc_std=(0.1, 0.1, 0.2, 0.2)):
         n_box, _ = boxes.shape
-        boxes = boxes.cpu().numpy()
-        labels = labels.cpu().numpy()
+        boxes = boxes.numpy()
+        labels = labels.numpy()
 
         rois = np.concatenate((rois, boxes), axis=0) # todo: understand it
         n_pos_roi = int(self.n_sample * self.pos_ratio)
