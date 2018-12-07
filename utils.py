@@ -261,6 +261,9 @@ class proposal_target(object):
 
         return sample_roi, gt_rpn_loc, gt_rpn_score
 
+def init_normal(layer, mean, std):
+    layer.weight.data.normal_(mean, std)
+    layer.bias.data.zero_()
 
 if __name__ == '__main__':
     a = generate_anchor()

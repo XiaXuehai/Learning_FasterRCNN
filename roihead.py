@@ -2,6 +2,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+import utils
 
 class RoiHead(nn.Module):
     def __init__(self, classifier, n_class=21, roi_size=7, spatial_scale=16.):
@@ -13,9 +14,11 @@ class RoiHead(nn.Module):
         self.classifier = classifier
         self.locs  = nn.Linear(4096, self.n_class*4)
         self.score = nn.Linear(4096, self.n_class)
+        utils.init_normal(self.locs, 0., 0.001)
+        utils.init_normal(self.score, 0., 0.01)
 
     def forward(self, x, rois):
-        # conference: https://github.com/SirLPS/roi_pooling/blob/master/speed.py
+        # reference: https://github.com/SirLPS/roi_pooling/blob/master/speed.py
         # ROI pooling by pytorch
         num_rois, _ = rois.shape
         # rescale to the size of the feature map

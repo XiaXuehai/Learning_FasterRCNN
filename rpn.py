@@ -18,8 +18,10 @@ class RPN(nn.Module):
         self.conv1 = nn.Conv2d(cin, cout, 3, 1, 1)
         self.locs  = nn.Conv2d(cout, n_anchor*4, 1)
         self.scores = nn.Conv2d(cout, n_anchor*2, 1)
-        # TODO: init parameters
-
+        # init parameters
+        utils.init_normal(self.conv1, 0., 0.01)
+        utils.init_normal(self.locs, 0., 0.01)
+        utils.init_normal(self.scores, 0., 0.01)
 
     def forward(self, x, img_size, scale):
         n, c, h, w = x.shape
@@ -67,6 +69,7 @@ class RPN(nn.Module):
         keep = keep[:post_nms]
         roi = roi_tmp[keep]
 
+        print(len(keep))
         return rpn_locs, rpn_scores, roi, anchors
 
 

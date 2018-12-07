@@ -26,7 +26,7 @@ class fastnet(nn.Module):
         self.roi_sigma = 1.
 
     def forward(self, x, boxes, labels, scale):
-        # locs of rpn, roi is (tx,ty,tw,th) from the paper
+        # locs of rpn and roi is (tx,ty,tw,th) from the paper
         img_size = x.shape[2:]
         scale = scale.item()
         # batch size is 1.
@@ -85,7 +85,7 @@ class fastnet(nn.Module):
         roi_locs, roi_scores, rois = self.predict_net(img, img_size, scale)
 
         n_class = 21
-        score_thresh = 0.1
+        score_thresh = 0.7
         nms_thresh = 0.3
         mean = torch.Tensor([0., 0., 0., 0.]).repeat(n_class).unsqueeze(0)
         std = torch.Tensor([0.1, 0.1, 0.2, 0.2]).repeat(n_class).unsqueeze(0)
