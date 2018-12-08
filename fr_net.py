@@ -44,18 +44,18 @@ class fastnet(nn.Module):
         rpn_loc_loss = self.loc_loss(rpn_locs[0], gt_rpn_loc, gt_rpn_label, self.rpn_sigma)
         rpn_cls_loss = F.cross_entropy(rpn_scores[0], gt_rpn_label, ignore_index=-1)
 
-        sample_roi, gt_roi_loc, gt_roi_score = self.proposal_target(rois, boxes, labels)
+        sample_roi, gt_roi_loc, gt_roi_label = self.proposal_target(rois, boxes, labels)
         roi_locs, roi_scores = self.head(fm, torch.from_numpy(sample_roi))
 
         # roi loss
         n_roi_locs = len(roi_locs)
         roi_locs = roi_locs.view(n_roi_locs, -1, 4)
-        roi_locs = roi_locs[torch.arange(n_roi_locs), gt_roi_score]
+        roi_locs = roi_locs[torch.arange(n_roi_locs), gt_roi_label]
 
         gt_roi_loc = torch.from_numpy(gt_roi_loc).cuda()
-        gt_roi_score = torch.from_numpy(gt_roi_score).cuda()
-        roi_loc_loss = self.loc_loss(roi_locs, gt_roi_loc, gt_roi_score, self.roi_sigma)
-        roi_cls_loss = F.cross_entropy(roi_scores, gt_roi_score, ignore_index=-1)
+        gt_roi_label = torch.from_numpy(gt_roi_label).cuda()
+        roi_loc_loss = self.loc_loss(roi_locs, gt_roi_loc, gt_roi_label, self.roi_sigma)
+        roi_cls_loss = F.cross_entropy(roi_scores, gt_roi_label, ignore_index=-1)
 
         losses = rpn_loc_loss + rpn_cls_loss + roi_loc_loss + roi_cls_loss
 
@@ -68,7 +68,7 @@ class fastnet(nn.Module):
         diff = in_weight * (pred_loc - gt_loc)
         abs_diff = abs(diff)
         flag = (abs_diff < 1./sigma2).float()
-        loc_loss = (flag * (sigma2/2.)) * diff**2 + (1-flag) * (abs_diff + 0.5/sigma2)
+        loc_loss = (flag * (sigma2/2.)) * diff**2 + (1-flag) * (abs_diff - 0.5/sigma2)
         loc_loss = loc_loss.sum()
         loc_loss /= (gt_label>=0).sum()
         return loc_loss
@@ -85,7 +85,7 @@ class fastnet(nn.Module):
         roi_locs, roi_scores, rois = self.predict_net(img, img_size, scale)
 
         n_class = 21
-        score_thresh = 0.7
+        score_thresh = 0.3
         nms_thresh = 0.3
         mean = torch.Tensor([0., 0., 0., 0.]).repeat(n_class).unsqueeze(0)
         std = torch.Tensor([0.1, 0.1, 0.2, 0.2]).repeat(n_class).unsqueeze(0)

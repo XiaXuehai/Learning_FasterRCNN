@@ -64,7 +64,7 @@ def nms(rois, nms_thresh):
     y1 = rois[:, 1]
     x2 = rois[:, 2]
     y2 = rois[:, 3]
-    area = (x2 - x1) * (y2 - y1)
+    area = (x2 - x1 + 1) * (y2 - y1 + 1)
 
     n = len(rois)
     order = np.arange(n)
@@ -77,17 +77,20 @@ def nms(rois, nms_thresh):
         yy1 = np.maximum(y1[i], y1[order[1:]])
         xx2 = np.minimum(x2[i], x2[order[1:]])
         yy2 = np.minimum(y2[i], y2[order[1:]])
-        w = np.maximum(0., xx2 - xx1)
-        h = np.maximum(0., yy2 - yy1)
+        w = np.maximum(0., xx2 - xx1 + 1)
+        h = np.maximum(0., yy2 - yy1 + 1)
         in_area = w * h
         iou = in_area / (area[i] + area[order[1:]] - in_area)
-
+        # keep the iou less than thresh
+        # update the order
         idx = np.where(iou <= nms_thresh)[0]
         order = order[idx+1]
 
     return keep
 
 def iou(abox, bbox):
+    # top-left and bottom-right
+    # broadcast
     tl = np.maximum(abox[:, None, :2], bbox[:, :2])
     br = np.minimum(abox[:, None, 2:], bbox[:, 2:])
     wh = br - tl
@@ -95,7 +98,6 @@ def iou(abox, bbox):
     inter = wh[:, :, 0] * wh[:, :, 1]
     a_area = np.prod(abox[:, 2:] - abox[:, :2], axis=1)
     b_area = np.prod(bbox[:, 2:] - bbox[:, :2], axis=1)
-
     # broadcast
     return inter / (a_area[:, None] + b_area - inter)
 
@@ -170,7 +172,7 @@ class anchor_target(object):
                 (anchors[:, 3] <= h)
             )[0]
         anchors = anchors[index_inside]
-        argmax_ious, label = self.create_label(index_inside, anchors, boxes)
+        argmax_ious, label = self.create_label(anchors, boxes)
         loc = bbox2loc(anchors, boxes[argmax_ious])
 
         gt_rpn_scores = self._unmap(label, n_anchor, index_inside, fill=-1)
@@ -178,12 +180,12 @@ class anchor_target(object):
 
         return gt_rpn_loc, gt_rpn_scores
 
-    def create_label(self, index_inside, anchor, boxes):
-        label = np.empty(index_inside.shape, dtype=np.int)
+    def create_label(self, anchor, boxes):
+        label = np.empty((len(anchor),), dtype=np.int)
         label.fill(-1)
         ious = iou(anchor, boxes)
         argmax_ious = ious.argmax(axis=1)
-        max_ious = ious[np.arange(len(index_inside)), argmax_ious]
+        max_ious = ious[np.arange(len(anchor)), argmax_ious]
 
         gt_argmax_ious = ious.argmax(axis=0)
         gt_max_ious = ious[gt_argmax_ious, np.arange(ious.shape[1])]
@@ -195,7 +197,7 @@ class anchor_target(object):
 
         n_pos = int(self.n_sample * self.pos_ratio)
         pos_index = np.where(label==1)[0]
-        if len(pos_index)>n_pos:
+        if len(pos_index) > n_pos:
             disable_index = np.random.choice(pos_index, size=len(pos_index)-n_pos, replace=False)
             label[disable_index] = -1
 
@@ -233,33 +235,35 @@ class proposal_target(object):
         boxes = boxes.numpy()
         labels = labels.numpy()
 
-        rois = np.concatenate((rois, boxes), axis=0) # todo: understand it
+        # to guarantee the ground-truth in samples-rois
+        rois = np.concatenate((rois, boxes), axis=0)
         n_pos_roi = int(self.n_sample * self.pos_ratio)
         ious = iou(rois, boxes)
         max_iou = ious.max(axis=1)
         argmax_iou = ious.argmax(axis=1)
+        # 0 is background
         iou_label = labels[argmax_iou] + 1
 
         pos_index = np.where(max_iou>=self.iou_pos)[0]
         n_pos_roi = min(n_pos_roi, len(pos_index))
-        if pos_index.size>0:
+        if len(pos_index) > n_pos_roi:
             pos_index = np.random.choice(pos_index, size=n_pos_roi, replace=False)
 
         neg_index = np.where((max_iou<self.iou_neg_h) & (max_iou>=self.iou_neg_l))[0]
         n_neg_roi = self.n_sample - n_pos_roi
-        n_neg_roi = min(n_neg_roi, neg_index.size)
-        if neg_index.size>0:
+        n_neg_roi = min(n_neg_roi, len(neg_index))
+        if len(neg_index) > n_neg_roi:
             neg_index = np.random.choice(neg_index, size=n_neg_roi, replace=False)
 
         keep = np.append(pos_index, neg_index)
-        gt_rpn_score = iou_label[keep]
-        gt_rpn_score[n_pos_roi:] = 0
+        gt_roi_label = iou_label[keep]
+        gt_roi_label[n_pos_roi:] = 0
         sample_roi = rois[keep]
 
-        gt_rpn_loc = bbox2loc(sample_roi, boxes[argmax_iou[keep]])
-        gt_rpn_loc = (gt_rpn_loc - np.array(loc_mean, dtype=np.float32)) / np.array(loc_std, dtype=np.float32)
+        gt_roi_loc = bbox2loc(sample_roi, boxes[argmax_iou[keep]])
+        gt_roi_loc = (gt_roi_loc - np.array(loc_mean, dtype=np.float32)) / np.array(loc_std, dtype=np.float32)
 
-        return sample_roi, gt_rpn_loc, gt_rpn_score
+        return sample_roi, gt_roi_loc, gt_roi_label
 
 def init_normal(layer, mean, std):
     layer.weight.data.normal_(mean, std)

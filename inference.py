@@ -27,7 +27,7 @@ def detect(path):
 
 if __name__ == '__main__':
     net = fastnet()
-    net.load_state_dict(torch.load('weight/fastrcnn_1205.weight'))
+    net.load_state_dict(torch.load('weight/fastrcnn_1.weight'))
     net.eval()
 
     img_path = 'picture/demo.jpg'

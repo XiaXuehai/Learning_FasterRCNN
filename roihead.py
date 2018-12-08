@@ -29,7 +29,7 @@ class RoiHead(nn.Module):
         for j in range(num_rois):
             roi = rois[j]
             im = x[:, :, roi[1]:(roi[3]+1), roi[0]:(roi[2]+1)]
-            pool.append(F.adaptive_avg_pool2d(im, self.roi_size ))
+            pool.append(F.adaptive_max_pool2d(im, self.roi_size))
         pool = torch.cat(pool, 0)
         pool = pool.view(num_rois, -1)
 

@@ -133,7 +133,7 @@ VOC_label_name = (
 if __name__ == '__main__':
     transform = [transforms.ToTensor(),
          transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])]
-    a = VOCData('train.txt', transform=transform)
+    a = VOCData('train_2007.txt', transform=transform)
 
     image, _, _,_ = a[1]
     print(image.shape)

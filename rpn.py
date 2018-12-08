@@ -75,5 +75,5 @@ class RPN(nn.Module):
 
 if __name__ == '__main__':
     a = RPN()
-    x = torch.rand(1, 512, 40, 60)
+    x = torch.randn(1, 512, 40, 60)
     a(x, (600, 1000), 1.0)
