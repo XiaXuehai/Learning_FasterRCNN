@@ -69,7 +69,6 @@ class RPN(nn.Module):
         keep = keep[:post_nms]
         roi = roi_tmp[keep]
 
-        print(len(keep))
         return rpn_locs, rpn_scores, roi, anchors
 
 

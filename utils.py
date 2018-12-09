@@ -118,8 +118,8 @@ def bbox2loc(src, dst):
 
     tx = (dst_x - src_x) / src_w
     ty = (dst_y - src_y) / src_h
-    tw = np.exp(dst_w / src_w)
-    th = np.exp(dst_h / src_h)
+    tw = np.log(dst_w / src_w)
+    th = np.log(dst_h / src_h)
 
     loc = np.vstack((tx, ty, tw, th)).transpose()
     return loc

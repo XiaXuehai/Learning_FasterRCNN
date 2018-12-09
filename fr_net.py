@@ -55,7 +55,7 @@ class fastnet(nn.Module):
         gt_roi_loc = torch.from_numpy(gt_roi_loc).cuda()
         gt_roi_label = torch.from_numpy(gt_roi_label).cuda()
         roi_loc_loss = self.loc_loss(roi_locs, gt_roi_loc, gt_roi_label, self.roi_sigma)
-        roi_cls_loss = F.cross_entropy(roi_scores, gt_roi_label, ignore_index=-1)
+        roi_cls_loss = F.cross_entropy(roi_scores, gt_roi_label)
 
         losses = rpn_loc_loss + rpn_cls_loss + roi_loc_loss + roi_cls_loss
 
@@ -66,9 +66,9 @@ class fastnet(nn.Module):
         in_weight[(gt_label>0).view(-1,1).expand_as(gt_loc)] = 1
         sigma2 = sigma**2
         diff = in_weight * (pred_loc - gt_loc)
-        abs_diff = abs(diff)
+        abs_diff = diff.abs()
         flag = (abs_diff < 1./sigma2).float()
-        loc_loss = (flag * (sigma2/2.)) * diff**2 + (1-flag) * (abs_diff - 0.5/sigma2)
+        loc_loss = 0.5 * flag * sigma2 * (diff**2) + (1-flag) * (abs_diff - 0.5/sigma2)
         loc_loss = loc_loss.sum()
         loc_loss /= (gt_label>=0).sum()
         return loc_loss
@@ -85,7 +85,7 @@ class fastnet(nn.Module):
         roi_locs, roi_scores, rois = self.predict_net(img, img_size, scale)
 
         n_class = 21
-        score_thresh = 0.3
+        score_thresh = 0.7
         nms_thresh = 0.3
         mean = torch.Tensor([0., 0., 0., 0.]).repeat(n_class).unsqueeze(0)
         std = torch.Tensor([0.1, 0.1, 0.2, 0.2]).repeat(n_class).unsqueeze(0)
@@ -122,6 +122,8 @@ class fastnet(nn.Module):
         bbox = np.concatenate(bbox, axis=0).astype(np.float32)
         label = np.concatenate(label, axis=0).astype(np.int32)
         score = np.concatenate(score, axis=0).astype(np.float32)
+
+        bbox = bbox * 16
 
         return bbox, label, score
 

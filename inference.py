@@ -20,8 +20,9 @@ def detect(path):
         y1 = box[1]
         x2 = box[2]
         y2 = box[3]
-        print(VOC_label_name[label])
+        class_name = VOC_label_name[label]
         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(img, class_name, (x1, int(y1+15)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
     cv2.imshow('xx', img)
     cv2.waitKey()
 
