@@ -24,14 +24,15 @@ def detect(path):
         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(img, class_name, (x1, int(y1+15)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
     cv2.imshow('xx', img)
+    cv2.imwrite('picture/2.jpg', img)
     cv2.waitKey()
 
 if __name__ == '__main__':
     net = fastnet()
-    net.load_state_dict(torch.load('weight/fastrcnn_1.weight'))
+    net.load_state_dict(torch.load('weight/fastrcnn.weight'))
     net.eval()
 
-    img_path = 'picture/demo.jpg'
+    img_path = 'picture/2012_003435.jpg'
     detect(img_path)
 
 
