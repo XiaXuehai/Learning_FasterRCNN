@@ -79,10 +79,11 @@ class fastnet(nn.Module):
         roi_locs, roi_scores = self.head(fm, torch.from_numpy(rois))
         return roi_locs, roi_scores, rois
 
-    def predict(self, img, scale=1.):
-        img = img.unsqueeze(0)
+    def predict(self, img, scale=1., using_gpu=False):
         img_size = img.shape[2:]
         roi_locs, roi_scores, rois = self.predict_net(img, img_size, scale)
+        if using_gpu:
+            roi_locs, roi_scores = roi_locs.cpu(), roi_scores.cpu()
 
         n_class = 21
         score_thresh = 0.7

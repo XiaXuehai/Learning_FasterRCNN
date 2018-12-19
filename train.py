@@ -55,7 +55,7 @@ def train():
                 iter_vis += 1
                 print('Epoch:{}, Image:{}, Loss:{:.3f}'.format(epoch, i+1, losses/100))
                 losses = 0
-
+        # save the model each epoch
         torch.save(net.state_dict(), 'weight/fastrcnn_{}.weight'.format(epoch))
 
 if __name__ == '__main__':

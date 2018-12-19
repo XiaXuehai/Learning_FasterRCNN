@@ -13,6 +13,7 @@ def detect(path):
     img = cv2.resize(img, (800, 600))
     img_ = np.transpose(img, (2, 0, 1)).astype(np.float32)
     img_ = torch.from_numpy(img_/255.)
+    img_ = img_.unsqueeze(0)
     bboxs, labels, scores = net.predict(img_)
 
     for (box,label) in zip(bboxs, labels):
