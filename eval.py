@@ -107,6 +107,7 @@ def eval(model_name):
 
     net = fastnet()
     net.load_state_dict(torch.load(model_name))
+    net.eval()
     if use_gpu:
         net = net.cuda()
 
@@ -117,7 +118,8 @@ def eval(model_name):
             image = image.cuda()
         gt_box = gt_boxess.squeeze(0).numpy()
         gt_label = gt_labelss.squeeze(0).numpy()
-        pre_box, pre_label, pre_score = net.predict(image, scale.item(), use_gpu)
+        with torch.no_grad():
+            pre_box, pre_label, pre_score = net.predict(image, scale.item(), use_gpu)
 
         gt_boxes.append(gt_box)
         gt_labels.append(gt_label)
@@ -126,7 +128,7 @@ def eval(model_name):
         pre_scores.append(pre_score)
 
     ap = calcu_ap(pre_boxes, pre_labels, pre_scores, gt_boxes, gt_labels)
-    print('ap={}, map={:.3f}'.format(ap, np.mean(ap)))
+    print('ap={},\n map={:.3f}'.format(ap, np.mean(ap)))
 
 
 if __name__ == '__main__':

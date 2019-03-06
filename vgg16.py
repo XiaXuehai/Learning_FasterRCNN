@@ -4,6 +4,7 @@ from torch import nn
 
 def vgg():
     model = vgg16(pretrained=True)
+    # print(model)
     features = list(model.features)[:30]
     classifier = list(model.classifier)
     # remove last layer and dropout layer
@@ -19,4 +20,4 @@ def vgg():
 
 if __name__ == '__main__':
     features, classifier = vgg()
-    print(features, classifier)
+    # print(features, classifier)

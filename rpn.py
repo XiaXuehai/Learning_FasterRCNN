@@ -31,18 +31,19 @@ class RPN(nn.Module):
         rpn_locs   = self.locs(x)
         rpn_scores = self.scores(x)
 
-        # rpn_locs is the (tx, ty, tw, th) which means (x_centre, y_centre, w,h)
+        # rpn_locs is the (tx, ty, tw, th) which means transformation of bbox
         rpn_locs   = rpn_locs.permute(0, 2, 3, 1).contiguous().view(n, -1, 4)
         rpn_scores = rpn_scores.permute(0, 2, 3, 1).contiguous().view(n, -1, 2)
         # got foreground scores
         scores = rpn_scores[:, :, 1].detach().cpu().numpy()
 
         # compromise to 1 batch_size!!!
-        rois = rpn_locs[0]
+        rpn_loc = rpn_locs[0]
         scores = scores[0]
         # transform (tx, ty, tw, th) to (x, y, w, h) to (x1, y1, x2, y2)
+        # (x, y, w, h) is predict bbox, used to compute loss with gt
         # and clip by img_size
-        rois = utils.transform_locs(anchors, rois.detach().cpu().numpy())
+        rois = utils.transform_locs(anchors, rpn_loc.detach().cpu().numpy())
         h, w = img_size
         rois[:, 0] = np.clip(rois[:, 0], 0, w)
         rois[:, 1] = np.clip(rois[:, 1], 0, h)

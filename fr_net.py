@@ -127,22 +127,3 @@ class fastnet(nn.Module):
         bbox = bbox * 16
 
         return bbox, label, score
-
-
-from data import data_load
-from torchvision import transforms
-
-if __name__ == '__main__':
-    transform = [transforms.ToTensor(),
-         transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])]
-    data = data_load.VOCData('data/train.txt', transform=transform)
-    image, label, boxes = data[30]
-    x = image.unsqueeze(0)
-    print(x.shape)
-    
-    net = fastnet()
-    y = net(x)
-    print(y.shape)
-
-
-    
